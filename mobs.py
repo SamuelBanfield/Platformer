@@ -10,11 +10,11 @@ class Mob():
     def __init__(self, scale, FPS):
         self.scale = scale
         self.terminalVelocity = int(25*scale/40)
-        self.gravity = 2*scale/FPS
+        self.gravity = 2 * scale/FPS
         self.landed = False
         self.facingDirection = 1
         self.jumpStrength = int(10*scale/40)
-        self.collisions = []
+        self.collisions = [] # This is used to keep track of collisions for the player, and cannonBalls hitting walls
 
     def __str__(self):
         return 'Mob'

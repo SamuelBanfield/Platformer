@@ -8,9 +8,9 @@ enemyImages = {
 }
 
 class Enemy(mobs.Mob):
-    def __init__(self, scale, FPS, scene):
+    def __init__(self, x, y, scale, FPS, scene):
         mobs.Mob.__init__(self, scale, FPS)
-        self.x, self.y = 40, 40
+        self.x, self.y = x, y
         self.width, self.height = 40, 40
         self.top, self.bottom, self.left, self.right = self.y, self.y + self.height - 1, self.x, self.x + self.width - 1
         self.landedImage = self.jumpingImage = enemyImages[self.type] # No difference between jumping and standard image for enemies
@@ -39,34 +39,14 @@ class Enemy(mobs.Mob):
         self.generateCollisions(oldTop, oldBottom, oldLeft, oldRight, newTop, newBottom, newLeft, newRight, level)
         self.top, self.bottom, self.left, self.right = self.y, self.y+self.height, self.x, self.x+self.width
 
-    def generateCollisions(self, oldTop, oldBottom, oldLeft, oldRight, newTop, newBottom, newLeft, newRight, level):
-        '''Decides which blocks need to be checked for collisions and handles the colisions'''
-        mapx , mapy = int(self.x // level.scale), int(self.y // level.scale)
-        for x in range(max(0, mapx-2), min(level.mapWidth, mapx+3)):
-            for y in range(max(0, mapy-2), min(level.mapHeight, mapy+3)):
-                if level.objectMap[x][y]:
-                    block = level.objectMap[x][y]
-                    collisions = self.checkCollision(block, oldTop, oldBottom, oldLeft, oldRight, newTop, newBottom, newLeft, newRight)
-                    if collisions[0]:
-                        self.landed = True
-                        self.ydot = 0
-                        self.y = block.top-self.height
-                        self.collisions.append([block, 0])
-                    if collisions[1]:
-                        self.ydot = 0
-                        self.y = block.bottom
-                        self.collisions.append([block, 1])
-                    if collisions[2]:
-                        self.xdot = 0
-                        self.x = block.left-self.width
-                        self.facingDirection = -1
-                        self.collisions.append([block, 2])
-                    if collisions[3]:
-                        self.xdot = 0
-                        self.x = block.right+1
-                        self.facingDirection = 1
-                        self.collisions.append([block, 3])
-
+        # Turning around when hitting a wall is part of the physicsUpdate
+        for collision in self.collisions:
+            if collision[1] == 2:
+                self.facingDirection = -1
+                self.xdot = 0
+            if collision[1] == 3:
+                self.facingDirection = 1
+                self.xdot = 0
 
     def __str__(self):
         return self.type
@@ -91,7 +71,7 @@ class Goomba(Enemy):
         self.speed = 2
         self.xdot, self.ydot = 3, 0
         self.type = 'Goomba'
-        Enemy.__init__(self, scale, FPS, scene)
+        Enemy.__init__(self, x, y, scale, FPS, scene)
 
     def update(self, level):
         if self.y>level.imageHeight+level.scale*5 or self.x<-self.width:
