@@ -1,9 +1,19 @@
 import pygame, mobs
 pygame.init()
 
+enemyImages = {
+    "CannonBall": pygame.image.load('images/cannonBall.png'),
+    "Goomba": pygame.image.load('images/enemy1.png'),
+    "SmartGoomba": pygame.image.load('images/smartGoomba.png')
+}
+
 class Enemy(mobs.Mob):
     def __init__(self, scale, FPS, scene):
         mobs.Mob.__init__(self, scale, FPS)
+        self.x, self.y = 40, 40
+        self.width, self.height = 40, 40
+        self.top, self.bottom, self.left, self.right = self.y, self.y + self.height - 1, self.x, self.x + self.width - 1
+        self.landedImage = self.jumpingImage = enemyImages[self.type] # No difference between jumping and standard image for enemies
         self.collisionSides = [True, True, True, True]
         self.image = self.landedImage
         self.scene = scene
@@ -30,10 +40,10 @@ class Enemy(mobs.Mob):
         self.top, self.bottom, self.left, self.right = self.y, self.y+self.height, self.x, self.x+self.width
 
     def generateCollisions(self, oldTop, oldBottom, oldLeft, oldRight, newTop, newBottom, newLeft, newRight, level):
-        '''decides which blocks need to be checked for collisions and handles the colisions'''
-        mapx , mapy = int(self.x//level.scale), int(self.y//level.scale)
-        for x in range(max(0,mapx-2), min(level.mapWidth, mapx+3)):
-            for y in range(max(0,mapy-2), min(level.mapHeight, mapy+3)):
+        '''Decides which blocks need to be checked for collisions and handles the colisions'''
+        mapx , mapy = int(self.x // level.scale), int(self.y // level.scale)
+        for x in range(max(0, mapx-2), min(level.mapWidth, mapx+3)):
+            for y in range(max(0, mapy-2), min(level.mapHeight, mapy+3)):
                 if level.objectMap[x][y]:
                     block = level.objectMap[x][y]
                     collisions = self.checkCollision(block, oldTop, oldBottom, oldLeft, oldRight, newTop, newBottom, newLeft, newRight)
@@ -63,39 +73,23 @@ class Enemy(mobs.Mob):
 
 class CannonBall(Enemy):
     def __init__(self, scale, FPS, x, y, scene):
-        self.x = x
-        self.y = y
-        self.width = 40
-        self.height = 40
         self.speed = 5
-        self.xdot = self.speed
-        self.ydot = 0
-        self.top, self.bottom, self.left, self.right = self.y, self.y+self.height-1, self.x, self.x+self.width-1
-        self.landedImage = pygame.image.load('images/cannonBall.png')
-        self.jumpingImage = pygame.image.load('images/cannonBall.png')
+        self.xdot, self.ydot = self.speed, 0
         self.type = 'CannonBall'
-        Enemy.__init__(self, scale, FPS, scene)
+        Enemy.__init__(self, x, y, scale, FPS, scene)
 
     def update(self, level):
-        if self.y>level.imageHeight+level.scale*5 or self.x<-self.width:
+        if self.y > level.imageHeight + level.scale * 5 or self.x < -self.width:
             level.mobs.remove(self)
-        self.xdot = self.speed*self.facingDirection
+        self.xdot = self.speed * self.facingDirection
         self.physicsUpdate(level, False)
         if len(self.collisions) != 0:
             level.mobs.remove(self)
 
 class Goomba(Enemy):
     def __init__(self, scale, FPS, x, y, scene):
-        self.x = x
-        self.y = y
-        self.width = 40
-        self.height = 40
         self.speed = 2
-        self.xdot = 3
-        self.ydot = 0
-        self.top, self.bottom, self.left, self.right = self.y, self.y+self.height-1, self.x, self.x+self.width-1
-        self.landedImage = pygame.image.load('images/enemy1.png')
-        self.jumpingImage = pygame.image.load('images/enemy1.png')
+        self.xdot, self.ydot = 3, 0
         self.type = 'Goomba'
         Enemy.__init__(self, scale, FPS, scene)
 
@@ -107,26 +101,21 @@ class Goomba(Enemy):
 
 class SmartGoomba(Enemy):
     def __init__(self, scale, FPS, x, y, scene):
-        self.x = x
-        self.y = y
-        self.width = 40
-        self.height = 40
         self.speed = 2
-        self.xdot = 0
-        self.ydot = 0
-        self.top, self.bottom, self.left, self.right = self.y, self.y+self.height-1, self.x, self.x+self.width-1
-        self.landedImage = pygame.image.load('images/smartGoomba.png')
-        self.jumpingImage = pygame.image.load('images/smartGoomba.png')
+        self.xdot, self.ydot = 0, 0
         self.type = 'SmartGoomba'
-        Enemy.__init__(self, scale, FPS, scene)
+        Enemy.__init__(self, x, y, scale, FPS, scene)
 
     def update(self, level):
         '''a custom update function that also prevents smart goombas from walking of edges'''
         self.collisions = []
         self.physicsUpdate(level, True)
-        if self.y>level.imageHeight+level.scale*5 or self.x<-self.width:
+        if self.y > level.imageHeight + level.scale * 5 or self.x < -self.width:
             level.mobs.remove(self)
-        mapPosition = [int(self.x+(self.width//2))//level.scale, int(self.y+(self.height//2))//level.scale]
+        mapPosition = [
+            int(self.x + (self.width // 2)) // level.scale,
+            int(self.y + (self.height // 2)) // level.scale
+        ]
         try:
             self.xdot = self.speed*self.facingDirection
             if (level.map[mapPosition[0]+1][mapPosition[1]+1] in ['.','x','<','>'] and level.map[mapPosition[0]-1][mapPosition[1]+1] in ['.','x','<','>']):
@@ -138,4 +127,5 @@ class SmartGoomba(Enemy):
                 if self.landed and (self.left%level.scale) <= self.speed:
                     self.facingDirection = 1
         except:
+            # Walking of the edge of the map gives an index error.
             pass
