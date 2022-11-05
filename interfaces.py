@@ -1,7 +1,9 @@
 import pygame
 
-class TextButton:
-    '''not used, the button class in main is used instead'''
+def getFont(size):
+    return pygame.font.Font(pygame.font.get_default_font(), size)
+
+class Button():
     def __init__(self, size, text, colour, hoverColour = None):
         self.font = getFont(size)
         self.text = text

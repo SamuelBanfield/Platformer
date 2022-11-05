@@ -1,20 +1,10 @@
 import pygame, sys, os
 import player, enemy, scene, interfaces
-from pygame.locals import *
+from interfaces import Button
+import interfaceImpl
 pygame.init()
 
 deleteImage = pygame.image.load('images/delete.png')
-
-class Button():
-    def __init__(self, size, text, colour, hoverColour = None):
-        self.font = getFont(size)
-        self.text = text
-        self.image = self.font.render(text, True, colour)
-        if hoverColour == None:
-            hoverColour = colour
-        self.hoverImage = self.font.render(text, True, hoverColour)
-        self.rect = self.image.get_rect()
-        self.currentImage = self.image
 
 def inside(point, pygameRect):
     return pygameRect.left < point[0] < pygameRect.right and pygameRect.top < point[1] < pygameRect.bottom
@@ -27,16 +17,9 @@ def main():
     pygame.display.set_caption('Platformer')
     CLOCK = pygame.time.Clock()
 
-    title = Button(40, 'Welcome to Platformer!', (255,255,255))
-    title.rect.center = (WIDTH//2, 6*HEIGHT//15)
-    info = Button(30, 'New Game', (255,255,255), (0,0,0))
-    info.rect.center = (WIDTH//2, 8*HEIGHT//15)
-    chooseLevelButton = Button(30, 'Level select', (255,255,255), (0,0,0))
-    chooseLevelButton.rect.center = (WIDTH//2, 9*HEIGHT//15)
-    levelEditButton = Button(30, 'Level editor', (255,255,255), (0,0,0))
-    levelEditButton.rect.center = (WIDTH//2, 10*HEIGHT//15)
+    buttons = interfaceImpl.getTitleScreenButtons(WIDTH, HEIGHT)
+    currentScreen = 'Title'
 
-    buttons = [title, info, chooseLevelButton, levelEditButton]
     running = True
     while running:
         for button in buttons:
@@ -46,33 +29,31 @@ def main():
                 button.currentImage = button.image
         drawMenu(SCREEN, buttons)
         for event in pygame.event.get():
-            if event.type == QUIT:
+            if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-            if event.type == MOUSEBUTTONDOWN:
-                if inside(pygame.mouse.get_pos(), info.rect):
-                    game(CLOCK, SCREEN, WIDTH, HEIGHT, FPS, '1-1.txt', False)
-                if inside(pygame.mouse.get_pos(), chooseLevelButton.rect):
-                    buttons = getButtons(WIDTH, HEIGHT)
-                if inside(pygame.mouse.get_pos(), levelEditButton.rect):
-                    game(CLOCK, SCREEN, WIDTH, HEIGHT, FPS, 'blankLevel.txt', True)
-                for button in buttons:
-                    if inside(pygame.mouse.get_pos(), button.rect):
-                        if button.text+'.txt' in os.listdir('levelFiles'):
-                            game(CLOCK, SCREEN, WIDTH, HEIGHT, FPS, button.text+'.txt', False)
-
-def getButtons(WIDTH, HEIGHT):
-    '''Gets the buttons for level files'''
-    menuButtons = []
-    for buttonString in os.listdir('levelFiles'):
-        if buttonString != '.DS_Store':
-            menuButtons.append(Button(30, buttonString[:-4], (255,255,255), (0,0,0)))
-    for x in range(len(menuButtons)):
-        menuButtons[x].rect.center = (WIDTH//4+(WIDTH//4)*(x%3), HEIGHT//4+(x//3)*(HEIGHT//10))
-    return menuButtons
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if currentScreen == 'Title':
+                    # Button 0 is the title and has no functionality 
+                    if inside(pygame.mouse.get_pos(), buttons[1].rect): # New game buttons
+                        game(CLOCK, SCREEN, WIDTH, HEIGHT, FPS, '1-1.txt', False)
+                    if inside(pygame.mouse.get_pos(), buttons[2].rect): # Level select button
+                        currentScreen = 'LevelSelect'
+                        buttons = interfaceImpl.getLevelSelectButtons(WIDTH, HEIGHT)
+                    if inside(pygame.mouse.get_pos(), buttons[3].rect): # Level edit button
+                        game(CLOCK, SCREEN, WIDTH, HEIGHT, FPS, 'blankLevel.txt', True)
+                if currentScreen == 'LevelSelect':
+                    for button in buttons:
+                        if inside(pygame.mouse.get_pos(), button.rect):
+                            if button.text+'.txt' in os.listdir('levelFiles'):
+                                game(CLOCK, SCREEN, WIDTH, HEIGHT, FPS, button.text+'.txt', False)
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE and currentScreen == 'LevelSelect':
+                    currentScreen = 'Title'
+                    buttons = interfaceImpl.getTitleScreenButtons(WIDTH, HEIGHT)
 
 def drawMenu(SCREEN, buttons):
-    SCREEN.fill((64,189,255))
+    SCREEN.fill((64, 189, 255))
     for button in buttons:
         SCREEN.blit(button.currentImage, button.rect)
     pygame.display.flip()
@@ -86,13 +67,15 @@ def game(CLOCK, SCREEN, WIDTH, HEIGHT, FPS, startScene, editMode):
     camera = scene.Camera(slack)
     buttonList = [interfaces.ImageButton(scene.imageDict[block], block) for block in scene.imageDict if block != 'castle']
     buttonList.append(interfaces.ImageButton(deleteImage, ' '))
-    editInterface = interfaces.Interface(scale*(len(buttonList))+20, 20+scale, buttonList, [(WIDTH-scale*(len(buttonList))-20)//2,HEIGHT-20-scale], )
+    editInterface = interfaces.Interface(scale*(len(buttonList)) + 20, 20 + scale, buttonList, [(WIDTH - scale * (len(buttonList)) - 20) // 2, HEIGHT - 20 - scale])
     editInterface.currentlySelected = ' '
     editInterface.displaying = editMode
     w, h = 600, 100
     saving = False
     savingInterface = interfaces.Interface(w, h, [], [(WIDTH-w)//2,(HEIGHT-h)//2])
     savingInterface.levelname = ''
+
+    font = interfaces.getFont(24)
 
     playing = True
     paused = False
@@ -101,7 +84,7 @@ def game(CLOCK, SCREEN, WIDTH, HEIGHT, FPS, startScene, editMode):
 
     while playing:
         playing = eventHandle(pygame.event.get(), currentScene, character, editInterface, savingInterface, camera, WIDTH, HEIGHT, editMode)
-        drawScreen(SCREEN, currentScene, gameImage, character, camera, scale, editInterface, savingInterface, editMode)
+        drawScreen(SCREEN, currentScene, gameImage, character, camera, scale, editInterface, savingInterface, font, editMode)
         if currentScene.complete:
             if not paused:
                 completeTime = time
@@ -111,6 +94,7 @@ def game(CLOCK, SCREEN, WIDTH, HEIGHT, FPS, startScene, editMode):
                     currentScene = scene.Scene(nextLevel[currentScene.name], scale, FPS)
                     character.startx, character.starty = currentScene.playerStartPosition[0]*scale, currentScene.playerStartPosition[1]*scale
                 else:
+                    # Repeat the same level again if no designated next level
                     currentScene = scene.Scene(currentScene.name, scale, FPS)
                 camera = scene.Camera(slack)
                 gameImage = pygame.Surface((currentScene.imageWidth, currentScene.imageHeight))
@@ -127,7 +111,7 @@ def game(CLOCK, SCREEN, WIDTH, HEIGHT, FPS, startScene, editMode):
         time += 1
         CLOCK.tick(FPS)
 
-def drawScreen(canvas, currentScene, gameImage, character, camera, scale, editInterface, savingInterface, editMode):
+def drawScreen(canvas, currentScene, gameImage, character, camera, scale, editInterface, savingInterface, font, editMode):
     '''draws everything to the main canvas'''
     camera.updateOffset(character, canvas.get_width(), canvas.get_height())
     if editInterface.displaying:
@@ -179,13 +163,13 @@ def drawScreen(canvas, currentScene, gameImage, character, camera, scale, editIn
 def eventHandle(events, currentScene, character, editInterface, savingInterface, camera, WIDTH, HEIGHT, editMode):
     '''handles all click, typing and quit events while a game is being played'''
     for event in events:
-        if event.type == QUIT:
+        if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
-        if event.type == KEYDOWN:
-            if event.key == K_ESCAPE and editMode == False:
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE and editMode == False:
                 return False
-            if event.key == K_ESCAPE and editInterface.displaying:
+            if event.key == pygame.K_ESCAPE and editInterface.displaying:
                 savingInterface.displaying = not savingInterface.displaying
             elif savingInterface.displaying:
                 if 97 <= event.key <= 122:
@@ -200,13 +184,13 @@ def eventHandle(events, currentScene, character, editInterface, savingInterface,
                     scene.save(savingInterface.levelname, currentScene.map)
                     return False
             else:
-                if event.key == K_e:
+                if event.key == pygame.K_e:
                     editInterface.displaying = not editInterface.displaying
-                if (event.key in [K_SPACE, K_UP, K_w]) and not editInterface.displaying:
+                if (event.key in [pygame.K_SPACE, pygame.K_UP, pygame.K_w]) and not editInterface.displaying:
                     if character.landed:
                         character.jump()
             
-        if event.type == MOUSEBUTTONDOWN and editInterface.displaying:
+        if event.type == pygame.MOUSEBUTTONDOWN and editInterface.displaying:
             #calculating location of click within map:
             mousePos = pygame.mouse.get_pos()
             if (WIDTH-editInterface.width)//2 <= mousePos[0] <= (WIDTH+editInterface.width)//2 and HEIGHT-editInterface.height <= mousePos[1]:
@@ -241,25 +225,25 @@ def eventHandle(events, currentScene, character, editInterface, savingInterface,
     pressed = pygame.key.get_pressed()
     if not savingInterface.displaying:
         if editInterface.displaying:
-            if pressed[K_LEFT] or pressed[K_a]:
+            if pressed[pygame.K_LEFT] or pressed[pygame.K_a]:
                 character.facingDirection = -1
                 character.x -= character.speed*4
-            if pressed[K_RIGHT] or pressed[K_d]:
+            if pressed[pygame.K_RIGHT] or pressed[pygame.K_d]:
                 character.facingDirection = +1
                 character.x += character.speed*4
-            if pressed[K_UP] or pressed[K_w]:
+            if pressed[pygame.K_UP] or pressed[pygame.K_w]:
                 character.y -= character.speed*4
-            if pressed[K_DOWN] or pressed[K_s]:
+            if pressed[pygame.K_DOWN] or pressed[pygame.K_s]:
                 character.y += character.speed*4
 
         else:
-            if pressed[K_LEFT] or pressed[K_a]:
+            if pressed[pygame.K_LEFT] or pressed[pygame.K_a]:
                 character.facingDirection = -1
                 if character.landed:
                     character.xdot -= character.speed
                 else:
                     character.xdot -= character.speed/2
-            if pressed[K_RIGHT] or pressed[K_d]:
+            if pressed[pygame.K_RIGHT] or pressed[pygame.K_d]:
                 character.facingDirection = 1
                 if character.landed:
                     character.xdot += character.speed
@@ -274,9 +258,6 @@ nextLevel = {
     '2-1.txt': '3-1.txt',
     '3-1.txt': '3-2.txt'
 }
-def getFont(size):
-    return pygame.font.Font(pygame.font.get_default_font(), size)
-font = getFont(24)
 
 if __name__ == '__main__':
     main()
