@@ -20,13 +20,14 @@ def main():
     currentScreen = 'Title'
 
     running = True
+    clouds = [[100, 100], [500, 40], [300, 500], [20, 470], [700, 120]]
     while running:
         for button in buttons:
             if inside(pygame.mouse.get_pos(), button.rect):
                 button.currentImage = button.hoverImage
             else:
                 button.currentImage = button.image
-        drawMenu(SCREEN, buttons)
+        drawMenu(SCREEN, buttons, clouds if currentScreen == 'Title' else [])
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -50,9 +51,14 @@ def main():
                 if event.key == pygame.K_ESCAPE and currentScreen == 'LevelSelect':
                     currentScreen = 'Title'
                     buttons = interfaceImpl.getTitleScreenButtons(WIDTH, HEIGHT)
+        clouds = [[cloud[0]+1, cloud[1]]  if cloud[0] < WIDTH else [-80, cloud[1]] for cloud in clouds]
+        CLOCK.tick(FPS)
 
-def drawMenu(SCREEN, buttons):
+def drawMenu(SCREEN, buttons, clouds):
     SCREEN.fill((64, 189, 255))
+    for cloud in clouds:
+        SCREEN.blit(scene.imageDict['cloudLeft'], (cloud[0], cloud[1]))
+        SCREEN.blit(scene.imageDict['cloudRight'], (cloud[0]+scene.imageDict['cloudLeft'].get_width(), cloud[1]))
     for button in buttons:
         SCREEN.blit(button.currentImage, button.rect)
     pygame.display.flip()
