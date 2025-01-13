@@ -1,6 +1,5 @@
 import pygame, sys, os
-import player, enemy, scene, interfaces
-from interfaces import Button
+import player, scene, interfaces
 import interfaceImpl
 pygame.init()
 

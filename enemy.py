@@ -16,6 +16,7 @@ class Enemy(mobs.Mob):
         self.landedImage = self.jumpingImage = enemyImages[self.type] # No difference between jumping and standard image for enemies
         self.collisionSides = [True, True, True, True]
         self.image = self.landedImage
+        self.walkingImages = [self.landedImage]
         self.scene = scene
         self.facingDirection = -1
 

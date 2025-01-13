@@ -1,4 +1,6 @@
 import pygame
+import random
+
 pygame.init()
 
 def inside(point, rect):
@@ -76,6 +78,8 @@ class Mob():
         '''updates the image based on the direction the player is facing and whether they are landed'''
         if self.landed:
             self.image = self.landedImage
+            if self.xdot > 1 or self.xdot < -1:
+                self.image = random.choice(self.walkingImages)
         else:
             self.image = self.jumpingImage
         if self.facingDirection == -1:

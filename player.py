@@ -19,6 +19,7 @@ class Player(mobs.Mob):
         self.jumpStrength = int(27*self.scale/40)
         self.landedImage = pygame.image.load('images/newChar.png')
         self.jumpingImage = pygame.image.load('images/newCharJumping.png')
+        self.walkingImages = [pygame.image.load('images/newCharWalking1.png'), pygame.image.load('images/newCharWalking2.png')]
         self.image = self.landedImage
 
     def reset(self, level):
